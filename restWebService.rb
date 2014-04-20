@@ -98,12 +98,8 @@ end
 def extractStreetAddresses(yelpResults)
   addresses = yelpResults["businesses"][0]["location"]["display_address"]
   address = addresses.join(" ")
-#  for a in addresses
-#    address = address + " " + a;
-# end
   puts address
   getGeoJSON(address)
-#  puts yelpResults["businesses"][0]["location"]["display_address"]
 end
 
 def getGeoJSON(address)
@@ -113,9 +109,7 @@ def getGeoJSON(address)
   geoCodeResponse = RestClient.get(geocodeRequestUri)
   jsonResults = JSON.parse(geoCodeResponse)
   if jsonResults 
-    # puts response.inspect
      latLng = jsonResults['results']['locations'][0]['latLng']
-    # [0]["locations"][0]
      puts latLng.inspect
   else
     puts "No response!"
