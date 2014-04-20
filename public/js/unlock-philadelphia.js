@@ -124,12 +124,40 @@ function addLayersAndShow(stationData, line) {
 		}
 }
 
+function addYelpResultsAndShow(data) {
+	businesses = [];
+	for (var i=0; i<data.businesses.length && i<30; i++) {
+					(function() {
+				var business = data.businesses[i];
+				console.log(business.location.geocoding.lng);
+
+				feature = {
+					type: 'Feature',
+					geometry: {
+						type: 'Point',
+						coordinates: [business.location.geocoding.lng, business.location.geocoding.lat]
+					},
+					properties: {
+						title: business.name,
+						description: "TODO: Fill this in",
+						'marker-size': 'small',
+						'marker-color': "#ca3092",
+						'marker-symbol': 'roadblock'
+					}
+				};
+				businesses.push(feature);
+			})();
+	}
+	map.addLayer(businesses);
+}
+
 function updateYelpResults(lat, lng, name) {
 	radiusInMetres = 1000;
 	console.log('/yelp/wheelchairaccess/' + lat + "/" + lng + "/" + radiusInMetres);
 	$.getJSON('/yelp/wheelchairaccess/' + lat + "/" + lng + "/" + radiusInMetres, function(data) {
 		$('#yelp-heading').html("Accessible near " + name);
 		$('#yelp-results').html(createListOfResults(data, name));
+		$('#yelp-results').html(addYelpResultsAndShow(data));
 	});
 }
 
