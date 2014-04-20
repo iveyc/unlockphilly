@@ -130,12 +130,6 @@ get '/yelp/wheelchairaccess/:lat/:lng/:radius' do
 end
 
 def extractStreetAddresses(yelpResults)
-<<<<<<< HEAD
-  addresses = yelpResults["businesses"][0]["location"]["display_address"]
-  address = addresses.join(" ")
-  puts address
-  getGeoJSON(address)
-=======
 
   yelpResults["businesses"].each_index do |i|
     addresses = yelpResults["businesses"][i]["location"]["display_address"]
@@ -146,7 +140,6 @@ def extractStreetAddresses(yelpResults)
     puts yelpResults["businesses"][i]["location"]
   end
   return yelpResults.to_json
->>>>>>> 3633c170c7a7c4634c0dcb085c555175922a046b
 end
 
 def getGeoJSON(address)
@@ -155,14 +148,8 @@ def getGeoJSON(address)
   geocodeRequestUri = "http://open.mapquestapi.com/geocoding/v1/address?key=#{mapquestKey}&location=#{address}"
   geoCodeResponse = RestClient.get(geocodeRequestUri)
   jsonResults = JSON.parse(geoCodeResponse)
-<<<<<<< HEAD
-  if jsonResults 
-     latLng = jsonResults['results']['locations'][0]['latLng']
-     puts latLng.inspect
-=======
   if jsonResults['results'][0]['locations'].length > 0
      latLng = jsonResults['results'][0]['locations'][0]['latLng']
->>>>>>> 3633c170c7a7c4634c0dcb085c555175922a046b
   else
     latLng = {"lng" => 0,"lat" => 0}
   end
