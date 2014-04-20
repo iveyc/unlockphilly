@@ -24,10 +24,16 @@ configure do
   db = conn.db(db_name)
   db.authenticate(db_details.user, db_details.password) unless (db_details.user.nil? || db_details.user.nil?)
   set :mongo_db, db
+  set :appUrl, "http://www.unlockphilly.com"
+  enable :logging
   puts "dbconnection successful to #{ENV['MONGOHQ_URL']}"
 end
 
 get '/' do
+  if request.host.include? 'herokuapp'
+    logger.info 'redirecting from ' + request.host + ' to ' + settings.appUrl
+    redirect settings.appUrl, 301
+  end
   erb :unlock_philadelphia
 end
 
@@ -51,11 +57,15 @@ get '/septa/stations/line/:line' do
   doc["stations"]=result.to_a
   doc["stations"].each_with_index do | station, i |
     outages["results"].each do | outage |
-      puts "comparing outage " + outage["station"].gsub(/-/, ' ').gsub(/Street/, 'St') + " with " + station["stop_name"].gsub(/-/, ' ').gsub(/Street/, 'St')
+      puts "comparing outage " + outage["station"].gsub(/-/, ' ').gsub(/Street/, 'St') + " with " + station["stop_name"].gsub(/-/, ' ').gsub(/Street/, 'St') + " on line " + getLineName(station)
       # have to remove hypens due to naming inconsistency and also abbreviate Street to St
       if station["stop_name"].gsub(/-/, ' ').gsub(/Street/, 'St').include?(outage["station"].gsub(/-/, ' ').gsub(/Street/, 'St'))
-        puts "found match!"
-        doc["stations"][i]["elevatorOutage"] = outage;
+        lineCode = getLineCode(outage["line"])
+        puts "station match, now checking line #{outage['line']} using code #{lineCode}"
+        if station[lineCode] == "1"
+          puts "found match!"
+          doc["stations"][i]["elevatorOutage"] = outage;  
+        end
       end
     end
   end
@@ -80,6 +90,30 @@ def getElevatorOutagesFromSeptaJson()
   return response;
 end
 
+def getLineCode(line)
+  if (line.include?('Broad'))
+    return "BSS"
+  elsif (line.include('Market'))
+    return "MFL"
+  elsif (line.include('Norris'))
+    return "NHSL"
+  end
+  return "";
+end
+
+def getLineName(station)
+  if station["BSS"] == "1"
+    return "BSS"
+  elsif station["MFL"] == "1"
+    return "MFL"
+  elsif station["NHSL"] == "1"
+    return "NHSL"
+  elsif station["PATCO"] == "1"
+    return "PATCO"
+  end
+  return "";
+end
+
 # make a call to yelp for wheelchair accessible businesses around given lat/lng
 get '/yelp/wheelchairaccess/:lat/:lng/:radius' do
   consumer_key = ENV['YELP_CONSUMER_KEY']
@@ -91,27 +125,45 @@ get '/yelp/wheelchairaccess/:lat/:lng/:radius' do
   access_token = OAuth::AccessToken.new(consumer, token, token_secret)
   path = "/v2/search?term=wheelchair+accessible&ll=#{params[:lat]},#{params[:lng]}&radius_filter=#{params[:radius]}&sort=1"
   yelpResults = access_token.get(path).body
-  extractStreetAddresses(JSON.parse(yelpResults))
-  yelpResults
+  address = extractStreetAddresses(JSON.parse(yelpResults))
+  return address
 end
 
 def extractStreetAddresses(yelpResults)
+<<<<<<< HEAD
   addresses = yelpResults["businesses"][0]["location"]["display_address"]
   address = addresses.join(" ")
   puts address
   getGeoJSON(address)
+=======
+
+  yelpResults["businesses"].each_index do |i|
+    addresses = yelpResults["businesses"][i]["location"]["display_address"]
+    address = addresses.join("%20")
+    address = address.gsub(" ", "%20")
+    geoCoding = getGeoJSON(address)
+    yelpResults["businesses"][i]["location"]["geocoding"] = geoCoding
+    puts yelpResults["businesses"][i]["location"]
+  end
+  return yelpResults.to_json
+>>>>>>> 3633c170c7a7c4634c0dcb085c555175922a046b
 end
 
 def getGeoJSON(address)
   mapquestKey = ENV['MAPQUEST_API_KEY'];
-  geocodeRequestUri = "http://open.mapquestapi.com/geocoding/v1/address?key=Fmjtd%7Cluur2q6yng%2C7l%3Do5-9a2a00&location=3600%20Chestnut%20Street%20Philadelphia"
-  # geocodeRequestUri = "http://open.mapquestapi.com/geocoding/v1/address?key=#{mapquestKey}&location=#{address}"
+#  geocodeRequestUri = "http://open.mapquestapi.com/geocoding/v1/address?key=Fmjtd%7Cluur2q6yng%2C7l%3Do5-9a2a00&location=3600%20Chestnut%20Street%20Philadelphia"
+  geocodeRequestUri = "http://open.mapquestapi.com/geocoding/v1/address?key=#{mapquestKey}&location=#{address}"
   geoCodeResponse = RestClient.get(geocodeRequestUri)
   jsonResults = JSON.parse(geoCodeResponse)
+<<<<<<< HEAD
   if jsonResults 
      latLng = jsonResults['results']['locations'][0]['latLng']
      puts latLng.inspect
+=======
+  if jsonResults['results'][0]['locations'].length > 0
+     latLng = jsonResults['results'][0]['locations'][0]['latLng']
+>>>>>>> 3633c170c7a7c4634c0dcb085c555175922a046b
   else
-    puts "No response!"
+    latLng = {"lng" => 0,"lat" => 0}
   end
 end
