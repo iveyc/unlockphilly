@@ -2,6 +2,7 @@ var mapboxId = 'jamestyack.hl98j78k';
 var mapboxUrl = 'http://{s}.tiles.mapbox.com/v3/' + mapboxId + '/{z}/{x}/{y}.png';
 var mapboxAttribution = '<a target="_blank" href="https://www.mapbox.com/about/maps/">© Mapbox © OpenStreetMap</a> <a class="mapbox-improve-map" target="_blank" href="https://www.mapbox.com/map-feedback/#examples.map-9ijuk24y/8.538/47.365/15">Improve this map</a>';
 var stationLayerGroups = {};
+var businessLayerGroup = null;
 var isFirstView = false;
 var accessTypeWheelchair = 'Wheelchair';
 var accessTypeOutage = 'Outage';
@@ -15,7 +16,7 @@ accessTypeColors[accessTypeWheelchair] = "#1a9641";
 accessTypeColors[accessTypeStairsOnly] = "#bababa";
 accessTypeColors[accessTypeOutage] = "#d7191c";
 var twitterCode = "<a href='https://twitter.com/intent/tweet?screen_name=septa' class='twitter-mention-button' data-related='septa'>Tweet to @septa</a><script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>";
-
+var MAX_YELP_RESULTS = 26;
 
 var mapPosition = {};
 mapPosition["Fairmount"] = {
@@ -124,46 +125,48 @@ function addLayersAndShow(stationData, line) {
 		}
 }
 
-function addYelpResultsAndShow(data) {
-	businesses = [];
-	for (var i=0; i<data.businesses.length && i<30; i++) {
-					(function() {
-				var business = data.businesses[i];
-				console.log(business.location.geocoding.lng);
-
-				feature = {
-					type: 'Feature',
-					geometry: {
-						type: 'Point',
-						coordinates: [business.location.geocoding.lng, business.location.geocoding.lat]
-					},
-					properties: {
-						title: business.name,
-						description: "TODO: Fill this in",
-						'marker-size': 'small',
-						'marker-color': "#ca3092",
-						'marker-symbol': 'roadblock'
+function addLayerAndShowYelpResults(data, name) {
+	console.log(businessLayerGroup);
+	var businesses = [];
+	var alphabet = "abcdefghijklmnopqrstuvwxyz";
+	for (var i=0; i<data.businesses.length && i<MAX_YELP_RESULTS; i++) {
+		var business = data.businesses[i];
+		feature = {
+			type: 'Feature',
+			geometry: {
+				type: 'Point',
+				coordinates: [business.location.geocoding.lng, business.location.geocoding.lat]
+				},
+				properties: {
+					title: business.name,
+					description: '', // TODO add description
+					'marker-size': 'small',
+					'marker-color': "#0099cc",
+					'marker-symbol': alphabet.charAt(i)
 					}
-				};
-				businesses.push(feature);
-			})();
+		};
+		businesses.push(feature);
 	}
-	map.addLayer(businesses);
+	businessLayerGroup = L.mapbox.featureLayer(businesses);
+	map.addLayer(businessLayerGroup);
 }
 
 function updateYelpResults(lat, lng, name) {
+	if (businessLayerGroup != null) {
+		map.removeLayer(businessLayerGroup);
+	}
 	radiusInMetres = 1000;
 	console.log('/yelp/wheelchairaccess/' + lat + "/" + lng + "/" + radiusInMetres);
 	$.getJSON('/yelp/wheelchairaccess/' + lat + "/" + lng + "/" + radiusInMetres, function(data) {
 		$('#yelp-heading').html("Accessible near " + name);
 		$('#yelp-results').html(createListOfResults(data, name));
-		$('#yelp-results').html(addYelpResultsAndShow(data));
+		addLayerAndShowYelpResults(data, name);
 	});
 }
 
 function createListOfResults(data, name) {
 	var resultsHtml = "<small><ul class='list-group'>";
-	for (var i=0; i<data.businesses.length && i<30; i++) {
+	for (var i=0; i<data.businesses.length && i<MAX_YELP_RESULTS; i++) {
 		var business = data.businesses[i];
 		resultsHtml += "<li class='list-group-item'>";
 		resultsHtml += "<a target='_blank' href='" + business.url + "'>" + business.name + "</a> <strong>" + business.categories[0][0] +"</strong> (" +
